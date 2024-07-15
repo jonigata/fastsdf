@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>FastSDF</title>
+  <style>
+    .canvas-container {
+      position: relative;
+      background-image: linear-gradient(45deg, #ccc 25%, transparent 25%, transparent 75%, #ccc 75%, #ccc),
+                        linear-gradient(45deg, #ccc 25%, transparent 25%, transparent 75%, #ccc 75%, #ccc);
+      background-size: 20px 20px;
+      background-position: 0 0, 10px 10px;
+      background-color: white;
+      width: 512px;
+      height: 512px;
+    }
+    canvas {
+      position: absolute;
+      top: 0;
+      left: 0;
+      cursor: pointer;
+    }
+  </style>
+</head>
+<body>
+  <h1>FastSDF</h1>
+  <img src="./picture.png">
+  <button id="my-button">Click Me</button>
+
+  <div class="canvas-container">
+    <canvas id="canvas" width="128" height="128"/>
+  </div>
+
+  <script type="module" src="./index.ts"></script>
+</body>
+</html>
