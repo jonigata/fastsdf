@@ -34,7 +34,7 @@ export class DFGenerator {
         float dist = length(seedPos - currentPos);
         float normalizedDist = dist / uMaxDist;
         float alpha = 1.0 - clamp(normalizedDist, 0.0, 1.0);
-        fragColor = vec4(0.0, 0.0, 0.0, alpha);  // 黒背景に変更
+        fragColor = vec4(1.0, 1.0, 1.0, alpha);  // 黒背景に変更
       }
     `;
 

@@ -18,6 +18,14 @@ export default defineConfig({
     }
   },
   server: {
-    open: '/examples/index.html'
-  }  
+    open: '/examples/index.html',
+    watch: {
+      // ウォッチするディレクトリを追加
+      paths: ['src/**/*', 'examples/**/*']    
+    }
+  },
+  // ViteがTypeScriptファイルをコンパイルできるように設定
+  esbuild: {
+    include: /.*\.[tj]s$/
+  }
 });

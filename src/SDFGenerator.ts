@@ -43,7 +43,7 @@ export class SDFGenerator {
           alpha = 0.5 + (normalizedDistB * 0.5); // 0.5 to 1.0
           alpha = clamp(alpha, 0.0, 1.0);
           // alpha = clamp(normalizedDistB, 0.0, 1.0);
-          fragColor = vec4(0.0, 0.0, 0.0, alpha);
+          fragColor = vec4(1.0, 1.0, 1.0, alpha);
         } else {
           // 外側の場合
           vec2 seedPosA = dataA.xy;
@@ -52,12 +52,8 @@ export class SDFGenerator {
           alpha = 0.5 - (normalizedDistA * 0.5); // 0.0 to 0.5
           alpha = clamp(alpha, 0.0, 1.0);
           // alpha = clamp(normalizedDistA, 0.0, 1.0);
-          fragColor = vec4(0.0, 0.0, 0.0, alpha);
+          fragColor = vec4(1.0, 1.0, 1.0, alpha);
         }
-        
-
-        
-
       }
       `;
 
@@ -95,7 +91,7 @@ export class SDFGenerator {
     return shader;
   }
 
-  public generate(nsfTextureA: WebGLTexture, nsfTextureB: WebGLTexture, maxDist: number): HTMLImageElement {
+  public generate(nsfTextureA: WebGLTexture, nsfTextureB: WebGLTexture, maxDist: number, alphaThreshold: number | null): HTMLImageElement {
     const canvas = (this.nsfGenerator as any).canvas;
     
     // 出力用テクスチャとフレームバッファの設定
@@ -151,8 +147,13 @@ export class SDFGenerator {
       for (let x = 0; x < canvas.width; x++) {
         const sourceIndex = ((canvas.height - 1 - y) * canvas.width + x) * 4;
         const targetIndex = (y * canvas.width + x) * 4;
+        // alphaThresholdがある場合、アルファ値がそれ以上だったら255にする
+        let rawAlpha = pixels[sourceIndex + 3];
+        if (alphaThreshold != null) {
+          rawAlpha = rawAlpha < alphaThreshold ? 0 : 1;
+        }
         // アルファ値を 0-255 の範囲に変換
-        const alpha = Math.round(pixels[sourceIndex + 3] * 255);
+        const alpha = Math.round(rawAlpha * 255);
         imageData.data[targetIndex] = Math.round(pixels[sourceIndex] * 255);
         imageData.data[targetIndex + 1] = Math.round(pixels[sourceIndex + 1] * 255);
         imageData.data[targetIndex + 2] = Math.round(pixels[sourceIndex + 2] * 255);

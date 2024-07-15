@@ -1,7 +1,7 @@
 import { NearestSeedFieldGenerator } from './NearestSeedFieldGenerator';
 import { SDFGenerator } from './SDFGenerator';
 
-function generateSDF(srcImg: HTMLImageElement, maxDist: number): HTMLImageElement {
+function generateSDF(srcImg: HTMLImageElement, maxDist: number, dstAlphaThreshold: number | null = null): HTMLImageElement {
   // 2のべき乗に切り上げる関数
   const nextPowerOfTwo = (n: number) => Math.pow(2, Math.ceil(Math.log2(n)));
 
@@ -20,18 +20,18 @@ function generateSDF(srcImg: HTMLImageElement, maxDist: number): HTMLImageElemen
   const sdfGenerator = new SDFGenerator(nsfGenerator);
 
   // アルファしきい値（必要に応じて調整）
-  const alphaThreshold = 0.5;
+  const srcAlphaThreshold = 0.5;
 
   // 通常のNSFテクスチャを生成
-  const initialTextureA = nsfGenerator.createInitialTextureFromImage(srcImg, alphaThreshold, false);
+  const initialTextureA = nsfGenerator.createInitialTextureFromImage(srcImg, srcAlphaThreshold, false);
   const nsfTextureA = nsfGenerator.generate(initialTextureA);
 
   // アルファ反転したNSFテクスチャを生成
-  const initialTextureB = nsfGenerator.createInitialTextureFromImage(srcImg, alphaThreshold, true);
+  const initialTextureB = nsfGenerator.createInitialTextureFromImage(srcImg, srcAlphaThreshold, true);
   const nsfTextureB = nsfGenerator.generate(initialTextureB);
 
   // SDFを生成
-  const sdfImg = sdfGenerator.generate(nsfTextureA, nsfTextureB, maxDist);
+  const sdfImg = sdfGenerator.generate(nsfTextureA, nsfTextureB, maxDist, dstAlphaThreshold);
 
   // 元の画像サイズにクロップ
   const resultCanvas = document.createElement('canvas');

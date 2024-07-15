@@ -15,11 +15,14 @@
       width: 512px;
       height: 512px;
     }
-    canvas {
+    #canvas {
       position: absolute;
       top: 0;
       left: 0;
       cursor: pointer;
+    }
+    #result {
+      background-color: black;
     }
   </style>
 </head>
@@ -32,6 +35,9 @@
     <canvas id="canvas" width="128" height="128"/>
   </div>
 
-  <script type="module" src="./index.ts"></script>
+  <div id="result">
+  </div>
+
+  <script type="module" src="/examples/index.ts"></script>
 </body>
 </html>
