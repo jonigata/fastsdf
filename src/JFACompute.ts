@@ -60,6 +60,5 @@ export class JFACompute {
   }
 
   destroy() {
-    this.computron.destroy();
   }
 }

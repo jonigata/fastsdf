@@ -16,7 +16,31 @@ export interface ComputeKitConfig<T extends UniformStructure<any>> {
   uniformsStructure: T;
 }
 
-export class ComputeKit<T extends UniformStructure<any>> {
+interface Destroyable {
+  destroy(): void;
+}
+
+export class ResourceScope {
+  private resources: Set<Destroyable> = new Set();
+
+  track<T extends Destroyable>(resource: T): T {
+    this.resources.add(resource);
+    return resource;
+  }
+
+  release() {
+    for (const resource of this.resources) {
+      resource.destroy();
+    }
+    this.resources.clear();
+  }
+
+  [Symbol.dispose](): void {
+    this.release();
+  }
+}
+
+export class ComputeKit<T extends UniformStructure<any>> implements Destroyable {
   constructor(
     public pipeline: GPUComputePipeline,
     public bindGroupLayout: GPUBindGroupLayout,
@@ -31,11 +55,17 @@ export class ComputeKit<T extends UniformStructure<any>> {
       1
     ];
   }
+
+  destroy(): void {
+    // GPUComputePipeline doesn't have a destroy method, so we don't need to do anything here.
+    // If there are any resources that need to be cleaned up in the future, they should be handled here.
+  }
 }
 
 export class Computron {
   private device: GPUDevice | null = null;
   private adapter: GPUAdapter | null = null;
+  private currentScope: ResourceScope | null = null;
 
   async init(): Promise<void> {
     if (!navigator.gpu) {
@@ -71,6 +101,25 @@ export class Computron {
     this.device.onuncapturederror = (event: GPUUncapturedErrorEvent) => {
       console.error("Uncaptured WebGPU error:", event.error);
     };
+  }
+
+  createResourceScope(): ResourceScope {
+    const scope = new ResourceScope();
+    this.currentScope = scope;
+    return scope;
+  }
+
+  endResourceScope(scope: ResourceScope) {
+    if (this.currentScope === scope) {
+      this.currentScope = null;
+    }
+  }
+
+  private trackResource<T extends Destroyable>(resource: T): T {
+    if (this.currentScope) {
+      return this.currentScope.track(resource);
+    }
+    return resource;
   }
 
   createComputeKit<T extends UniformStructure<any>>(config: ComputeKitConfig<T>): ComputeKit<T> {
@@ -113,7 +162,7 @@ ${config.shaderCode}
       }
     });
 
-    return new ComputeKit(pipeline, bindGroupLayout, config.workgroupSize, config.uniformsStructure);
+    return this.trackResource(new ComputeKit(pipeline, bindGroupLayout, config.workgroupSize, config.uniformsStructure));
   }
 
   async runCompute<T extends UniformStructure<any>>(
@@ -132,18 +181,11 @@ ${config.shaderCode}
       throw new Error(`Invalid input data length. Expected ${dataSize}, but got ${inputData.length}`);
     }
 
-    // console.log(`Input data size: ${inputData.length}`);
-
     const inputBuffer = this.createStorageBuffer(inputData);
-    // console.log(`Input buffer size: ${inputBuffer.size}`);
-
     const uniformBuffer = this.createUniformBuffer(this.uniformsToFloat32Array(uniforms, computeKit.uniformsStructure));
-    // console.log(`Uniform buffer size: ${uniformBuffer.size}`);
-
     const bindGroup = this.createBindGroup(computeKit.bindGroupLayout, [inputBuffer, uniformBuffer]);
 
     const workgroupCount = computeKit.calculateWorkgroups(width, height);
-    // console.log(`Workgroup count: ${workgroupCount}`);
 
     const commandEncoder = this.createCommandEncoder();
     const passEncoder = commandEncoder.beginComputePass();
@@ -152,13 +194,11 @@ ${config.shaderCode}
     passEncoder.dispatchWorkgroups(...workgroupCount);
     passEncoder.end();
 
-    // Create a staging buffer for reading back the result
     const stagingBuffer = this.device.createBuffer({
       size: dataSize * Float32Array.BYTES_PER_ELEMENT,
       usage: GPUBufferUsage.MAP_READ | GPUBufferUsage.COPY_DST,
     });
 
-    // Copy the result from the storage buffer to the staging buffer
     commandEncoder.copyBufferToBuffer(
       inputBuffer,
       0,
@@ -169,17 +209,12 @@ ${config.shaderCode}
 
     this.device.queue.submit([commandEncoder.finish()]);
 
-    // Map the staging buffer to read the results
     await stagingBuffer.mapAsync(GPUMapMode.READ);
     const resultArray = new Float32Array(stagingBuffer.getMappedRange());
-    // console.log(`Result array length: ${resultArray.length}`);
-
-    // Create a copy of the result before unmapping
     const resultCopy = resultArray.slice();
 
     stagingBuffer.unmap();
 
-    // Clean up
     inputBuffer.destroy();
     uniformBuffer.destroy();
     stagingBuffer.destroy();
@@ -204,15 +239,15 @@ ${config.shaderCode}
   }
 
   private createStorageBuffer(data: Float32Array): GPUBuffer {
-    const buffer = this.createBuffer(data, GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_SRC | GPUBufferUsage.COPY_DST);
-    // console.log(`Created storage buffer with size: ${buffer.size}`);
-    return buffer;
+    return this.trackResource(
+      this.createBuffer(data, GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_SRC | GPUBufferUsage.COPY_DST)
+    );
   }
 
   private createUniformBuffer(data: Float32Array): GPUBuffer {
-    const buffer = this.createBuffer(data, GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST);
-    // console.log(`Created uniform buffer with size: ${buffer.size}`);
-    return buffer;
+    return this.trackResource(
+      this.createBuffer(data, GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST)
+    );
   }
 
   private createBuffer(data: Float32Array, usage: GPUBufferUsageFlags): GPUBuffer {
@@ -227,24 +262,6 @@ ${config.shaderCode}
     new Float32Array(buffer.getMappedRange()).set(data);
     buffer.unmap();
     return buffer;
-  }
-
-  private async readBuffer(buffer: GPUBuffer, size: number): Promise<Float32Array> {
-    if (!this.device) {
-      throw new Error("GPUDevice not initialized.");
-    }
-    const readBuffer = this.device.createBuffer({
-      size: size,
-      usage: GPUBufferUsage.COPY_DST | GPUBufferUsage.MAP_READ
-    });
-    const commandEncoder = this.device.createCommandEncoder();
-    commandEncoder.copyBufferToBuffer(buffer, 0, readBuffer, 0, size);
-    this.device.queue.submit([commandEncoder.finish()]);
-
-    await readBuffer.mapAsync(GPUMapMode.READ);
-    const resultArray = new Float32Array(readBuffer.getMappedRange());
-    readBuffer.unmap();
-    return resultArray;
   }
 
   private createBindGroup(layout: GPUBindGroupLayout, buffers: GPUBuffer[]): GPUBindGroup {
@@ -263,13 +280,6 @@ ${config.shaderCode}
       throw new Error("GPUDevice not initialized.");
     }
     return this.device.createCommandEncoder();
-  }
-
-  private submitCommandBuffer(commandBuffer: GPUCommandBuffer): void {
-    if (!this.device) {
-      throw new Error("GPUDevice not initialized.");
-    }
-    this.device.queue.submit([commandBuffer]);
   }
 
   private generateUniformsStructCode<T extends UniformStructure<any>>(
