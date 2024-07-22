@@ -11,7 +11,8 @@
     "esModuleInterop": true,
     "skipLibCheck": true,
     "forceConsistentCasingInFileNames": true,
-    "strictPropertyInitialization": false  
+    "strictPropertyInitialization": false,
+    "types": ["@webgpu/types"]  
   },
   "include": ["src","examples"],
   "exclude": ["examples/**/*"]
