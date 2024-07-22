@@ -13,6 +13,7 @@
     "forceConsistentCasingInFileNames": true,
     "strictPropertyInitialization": false  
   },
-  "include": ["src","examples"]
+  "include": ["src","examples"],
+  "exclude": ["examples/**/*"]
 }
 
