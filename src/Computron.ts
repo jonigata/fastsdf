@@ -1,5 +1,3 @@
-// Computron.ts
-
 export type UniformFormat = 'u32' | 'i32' | 'f32';
 
 export type UniformStructure<T> = {
@@ -92,7 +90,7 @@ export class Computron {
       this.device = null;
       
       this.initializeDevice().then(() => {
-      // console.log("WebGPU device successfully restored.");
+        console.log("WebGPU device successfully restored.");
       }).catch(error => {
         console.error("Failed to restore WebGPU device:", error);
       });
@@ -138,10 +136,12 @@ ${uniformsStructCode}
 
 ${config.shaderCode}
 `;
+    console.log(fullShaderCode);
 
     const bindGroupLayoutEntries: GPUBindGroupLayoutEntry[] = [
-      { binding: 0, visibility: GPUShaderStage.COMPUTE, buffer: { type: "storage" } },
-      { binding: 1, visibility: GPUShaderStage.COMPUTE, buffer: { type: "uniform" } },
+      { binding: 0, visibility: GPUShaderStage.COMPUTE, buffer: { type: "read-only-storage" } },
+      { binding: 1, visibility: GPUShaderStage.COMPUTE, buffer: { type: "storage" } },
+      { binding: 2, visibility: GPUShaderStage.COMPUTE, buffer: { type: "uniform" } },
     ];
 
     const bindGroupLayout = this.device.createBindGroupLayout({
@@ -175,53 +175,88 @@ ${config.shaderCode}
     if (!this.device) {
       throw new Error("GPUDevice not initialized.");
     }
-
+  
     const dataSize = width * height * 4;
-    if (inputData.length !== dataSize) {
-      throw new Error(`Invalid input data length. Expected ${dataSize}, but got ${inputData.length}`);
-    }
-
+    console.log("Debug: dataSize =", dataSize);
+  
     const inputBuffer = this.createStorageBuffer(inputData);
-    const uniformBuffer = this.createUniformBuffer(this.uniformsToFloat32Array(uniforms, computeKit.uniformsStructure));
-    const bindGroup = this.createBindGroup(computeKit.bindGroupLayout, [inputBuffer, uniformBuffer]);
-
+    console.log("Debug: inputBuffer created");
+  
+    const outputBuffer = this.device.createBuffer({
+      size: dataSize * Float32Array.BYTES_PER_ELEMENT,
+      usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_SRC
+    });
+    console.log("Debug: outputBuffer created");
+  
+    // Uniformsの確認と設定
+    console.log("Debug: Uniforms", uniforms);
+    const uniformBufferSize = Object.keys(uniforms).length * 4; // 4 bytes per u32
+    const uniformBuffer = this.device.createBuffer({
+      size: uniformBufferSize,
+      usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
+    });
+    const uniformsArray = new Uint32Array(Object.values(uniforms));
+    this.device.queue.writeBuffer(uniformBuffer, 0, uniformsArray);
+    console.log("Debug: uniformBuffer created and data written");
+  
+    const bindGroup = this.device.createBindGroup({
+      layout: computeKit.bindGroupLayout,
+      entries: [
+        { binding: 0, resource: { buffer: inputBuffer } },
+        { binding: 1, resource: { buffer: outputBuffer } },
+        { binding: 2, resource: { buffer: uniformBuffer } },
+      ],
+    });
+    console.log("Debug: bindGroup created");
+  
     const workgroupCount = computeKit.calculateWorkgroups(width, height);
-
+    console.log("Debug: workgroupCount =", workgroupCount);
+  
     const commandEncoder = this.createCommandEncoder();
     const passEncoder = commandEncoder.beginComputePass();
     passEncoder.setPipeline(computeKit.pipeline);
     passEncoder.setBindGroup(0, bindGroup);
     passEncoder.dispatchWorkgroups(...workgroupCount);
     passEncoder.end();
-
+    console.log("Debug: Compute pass encoded");
+  
     const stagingBuffer = this.device.createBuffer({
       size: dataSize * Float32Array.BYTES_PER_ELEMENT,
       usage: GPUBufferUsage.MAP_READ | GPUBufferUsage.COPY_DST,
     });
-
+  
     commandEncoder.copyBufferToBuffer(
-      inputBuffer,
+      outputBuffer,
       0,
       stagingBuffer,
       0,
       dataSize * Float32Array.BYTES_PER_ELEMENT
     );
-
+    console.log("Debug: Buffer copy encoded");
+  
     this.device.queue.submit([commandEncoder.finish()]);
-
+    console.log("Debug: Command submitted to GPU queue");
+  
     await stagingBuffer.mapAsync(GPUMapMode.READ);
+    console.log("Debug: Staging buffer mapped");
+  
     const resultArray = new Float32Array(stagingBuffer.getMappedRange());
+    console.log("Debug: Output data (first 10 values):", resultArray.slice(0, 40));
+  
     const resultCopy = resultArray.slice();
-
+    console.log("Debug: Result copied from staging buffer");
+  
     stagingBuffer.unmap();
-
+  
     inputBuffer.destroy();
+    outputBuffer.destroy();
     uniformBuffer.destroy();
     stagingBuffer.destroy();
-
+    console.log("Debug: Buffers destroyed");
+  
     return resultCopy;
   }
-
+  
   private uniformsToFloat32Array<T extends UniformStructure<any>>(
     uniforms: UniformValues<T>,
     structure: T
@@ -300,8 +335,9 @@ struct ${structName} {
 ${uniformFields}
 };
 
-@group(0) @binding(0) var<storage, read_write> data: array<vec4f>;
-@group(0) @binding(1) var<uniform> uniforms: ${structName};
+@group(0) @binding(0) var<storage, read> input_data: array<vec4f>;
+@group(0) @binding(1) var<storage, read_write> output_data: array<vec4f>;
+@group(0) @binding(2) var<uniform> uniforms: ${structName};
 `;
   }
 

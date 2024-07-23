@@ -5,5 +5,7 @@ import { generateSDF } from './generateSDF';
 import { VoronoiRenderer } from './VoronoiRenderer';
 import { JFACompute } from './JFACompute';
 import { Computron } from './Computron';
+import { FloatField } from './FloatField';
+import { testRedShader } from './testRedShader';
 
-export { NearestSeedFieldGenerator, DFGenerator, SDFGenerator, generateSDF, VoronoiRenderer, JFACompute, Computron };
+export { testRedShader, FloatField, NearestSeedFieldGenerator, DFGenerator, SDFGenerator, generateSDF, VoronoiRenderer, JFACompute, Computron };

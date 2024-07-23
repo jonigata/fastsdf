@@ -1,44 +1,53 @@
-import { JFACompute, Computron } from '../dist/fastsdf.es.js';
+import { JFACompute, Computron, FloatField, testRedShader } from '../dist/fastsdf.es.js';
+
+// 計測
+async function measureTime<T>(label: string, f: () => Promise<T>): Promise<void> {
+  const start = performance.now();
+  const t: T = await f();
+  const end = performance.now();
+  console.log(`[${label}] Time: ${end - start}ms`);
+  return this;
+}
 
 
 document.getElementById('my-button')!.addEventListener('click', async () => {
     const start = performance.now();
-    const c = new Computron();
-    await c.init();
 
-    const jfa = new JFACompute(c);
-    await jfa.init();
+    let jfa: JFACompute;
+    await measureTime('Init', async () => {
+        const c = new Computron();
+        await c.init();
 
-    // 時間計測
-    const mid = performance.now();
-    const w = 256;
-    const h = 256;
-    const data = new Float32Array(w * h * 4);
-    const cookedData = await jfa.compute(data, w, h);
-    const end = performance.now();
-    console.log(`Total Time: ${end - start}ms, Init Time: ${mid - start}ms, Compute Time: ${end - mid}ms`);
+        jfa = new JFACompute(c);
+        await jfa.init();
+    });
 
-/*
-    const img = new Image();
-    img.src = './picture.png';
-    await img.decode();
-    console.log(img.width, img.height);
-    // document.body.appendChild(img);
-    
-    const sdf = generateSDF(img, 10, 0.25);
-    console.log(sdf.width, sdf.height);
+    let floatField: FloatField;
+    await measureTime('Convert from source image', async () => {
+        const sourcePicture = document.querySelector<HTMLImageElement>('#source-picture')!;
+        // floatField = FloatField.createFromImage(sourcePicture);
+        floatField = FloatField.createWithRandomSeeds(256, 256);
+        console.log(floatField.analyzeAlpha());
+    });
+
+    let cookedData: FloatField;
+    await measureTime('Compute', async () => {
+        cookedData = await jfa!.compute(floatField!);
+        // cookedData = await jfa!.compute(floatField.width, floatField.height);
+        console.log(cookedData.analyzeAlpha());
+    });
+
+    let dataCanvas: HTMLCanvasElement;
+    await measureTime('toCanvas', async () => {
+        dataCanvas = cookedData.toCanvas();
+    });
+
     const canvas = document.querySelector<HTMLCanvasElement>('#canvas')!;
     const ctx = canvas.getContext('2d')!;
 
-    ctx.save();
-    ctx.drawImage(sdf, 0, 0);
-    ctx.globalCompositeOperation = 'source-in';
-    ctx.fillStyle = 'cyan';
-    ctx.fillRect(0, 0, canvas.width, canvas.height);
-    ctx.restore();
+    ctx.drawImage(dataCanvas!, 0, 0);
 
-    ctx.drawImage(img, 0, 0);
+    document.getElementById('result')!.appendChild(dataCanvas!);
 
-    document.getElementById('result')!.appendChild(sdf);
-*/
+   // await testRedShader();
 });
