@@ -31,7 +31,7 @@ document.getElementById('my-button')!.addEventListener('click', async () => {
     document.getElementById('result')!.appendChild(plainImage!.toCanvas());
 
     let seedMap: FloatField;
-    await measureTime('convert to JFA', async () => {
+    await measureTime('convert to SeedMap', async () => {
         seedMap = JFACompute.createJFASeedMap(plainImage, 0.5, false);
     });
 
@@ -42,7 +42,7 @@ document.getElementById('my-button')!.addEventListener('click', async () => {
     });
 
     let distanceField: FloatField;
-    await measureTime('convert from JFA', async () => {
+    await measureTime('Generate distance field', async () => {
         distanceField = JFACompute.generateDistanceField(cookedData, 10);
     });
 
@@ -53,10 +53,19 @@ document.getElementById('my-button')!.addEventListener('click', async () => {
 
     const canvas = document.querySelector<HTMLCanvasElement>('#canvas')!;
     const ctx = canvas.getContext('2d')!;
-
     ctx.drawImage(dataCanvas!, 0, 0);
 
     document.getElementById('result')!.appendChild(dataCanvas!);
+
+    await measureTime('Generate signed distance field', async () => {
+        const reveresedSeedMap = JFACompute.createJFASeedMap(plainImage, 0.5, true);
+        const reveresedCookedData = await jfa!.compute(reveresedSeedMap);
+        const sdf = JFACompute.generateSignedDistanceField(
+            cookedData, reveresedCookedData, 10, 0.9
+        );
+        const sdfCanvas = sdf.toCanvas();
+        document.getElementById('result')!.appendChild(sdfCanvas);
+    });
 
    // await testRedShader();
 });

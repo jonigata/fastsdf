@@ -142,7 +142,7 @@ export class JFACompute {
         const [nx, ny] = [inputData[i + 0], inputData[i + 1]];
         const dist = Math.sqrt(inputData[i + 3]);
         const normalizedDist = dist / maxDist;
-        alpha = 0.5 - (normalizedDist * 0.5); // 0.0 to 0.5
+        alpha = 1.0 - normalizedDist; // 0.0 to 1.0
         alpha = Math.max(0, Math.min(1, alpha));
         outputData[i + 0] = 1.0;
         outputData[i + 1] = 1.0;
@@ -155,20 +155,20 @@ export class JFACompute {
   }
 
   static generateSignedDistanceField(
-    dstfield: FloatField,
     outerField: FloatField,
     innerField: FloatField,
-    maxDist: number, alphaThreshold: number | null = null) {
-
-    const dstData = dstfield.data;
+    maxDist: number,
+    alphaThreshold: number | null = null
+  ): FloatField {
+    const dstField = new FloatField(outerField.width, outerField.height);
+    const dstData = dstField.data;
     const outerData = outerField.data;
     const innerData = innerField.data;
-    const [w, h] = [dstfield.width, dstfield.height];
-
+    const [w, h] = [outerField.width, outerField.height];
+  
     for (let y = 0; y < h; y++) {
       for (let x = 0; x < w; x++) {
         const i = (y * w + x) * 4;
-        // alphaThresholdがある場合適用
         let alpha;
         const outerDistSq = outerData[i + 3];
         if (outerDistSq === 0) {
@@ -180,11 +180,13 @@ export class JFACompute {
         if (alphaThreshold != null) {
           alpha = alpha < alphaThreshold ? 0 : 1;
         }
-        dstData[i+0] = 1.0;
-        dstData[i+1] = 1.0;
-        dstData[i+2] = 1.0;
-        dstData[i+3] = alpha;
+        dstData[i + 0] = 1.0;
+        dstData[i + 1] = 1.0;
+        dstData[i + 2] = 1.0;
+        dstData[i + 3] = alpha;
       }
     }
+  
+    return dstField;
   }
 }
