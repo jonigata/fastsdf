@@ -63,6 +63,14 @@ export class FloatField {
     // Use the existing createFromCanvas method
     return FloatField.createFromCanvas(canvas);
   }
+
+  static createFromImageOrCanvas(imageOrCanvas: HTMLImageElement | HTMLCanvasElement): FloatField {
+    if (imageOrCanvas instanceof HTMLImageElement) {
+      return FloatField.createFromImage(imageOrCanvas);
+    } else {
+      return FloatField.createFromCanvas(imageOrCanvas);
+    }
+  }
   
   toCanvas(): HTMLCanvasElement {
     // オフスクリーンcanvasの作成

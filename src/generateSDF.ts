@@ -1,52 +1,52 @@
-import { NearestSeedFieldGenerator } from './NearestSeedFieldGenerator';
-import { SDFGenerator } from './SDFGenerator';
+import { Computron } from "./Computron";
+import { JFACompute } from "./JFACompute";
+import { FloatField } from "./FloatField";
 
-function generateSDF(srcImg: HTMLImageElement, maxDist: number, dstAlphaThreshold: number | null = null): HTMLImageElement {
-  // 2のべき乗に切り上げる関数
-  const nextPowerOfTwo = (n: number) => Math.pow(2, Math.ceil(Math.log2(n)));
+export async function generateSDF(
+  src: HTMLImageElement | HTMLCanvasElement, 
+  srcAlphaThreshold: number,
+  maxDistance: number,  
+  dstAlphaThreshold: number): Promise<HTMLCanvasElement> {
 
-  // キャンバスサイズを決定（2のべき乗に切り上げ）
-  const canvasWidth = nextPowerOfTwo(srcImg.width);
-  const canvasHeight = nextPowerOfTwo(srcImg.height);
-  console.log(canvasWidth, canvasHeight);
+  const c = new Computron();
+  await c.init();
 
-  // キャンバスを作成
-  const canvas = document.createElement('canvas');
-  canvas.width = canvasWidth;
-  canvas.height = canvasHeight;
+  const jfa = new JFACompute(c);
+  await jfa.init();
 
-  // NearestSeedFieldGeneratorとSDFGeneratorを初期化
-  const nsfGenerator = new NearestSeedFieldGenerator(canvas);
-  const sdfGenerator = new SDFGenerator(nsfGenerator);
+  const plainImage = FloatField.createFromImageOrCanvas(src);
 
-  // アルファしきい値（必要に応じて調整）
-  const srcAlphaThreshold = 0.5;
+  const seedMap = JFACompute.createJFASeedMap(plainImage, srcAlphaThreshold, false);
+  const cookedData = await jfa!.compute(seedMap!);
 
-  // 通常のNSFテクスチャを生成
-  const initialTextureA = nsfGenerator.createInitialTextureFromImage(srcImg, srcAlphaThreshold, false);
-  const nsfTextureA = nsfGenerator.generate(initialTextureA);
+  const inversedSeedMap = JFACompute.createJFASeedMap(plainImage, srcAlphaThreshold, true);
+  const inversedCookedData = await jfa!.compute(inversedSeedMap);
 
-  // アルファ反転したNSFテクスチャを生成
-  const initialTextureB = nsfGenerator.createInitialTextureFromImage(srcImg, srcAlphaThreshold, true);
-  const nsfTextureB = nsfGenerator.generate(initialTextureB);
-
-  // SDFを生成
-  const sdfImg = sdfGenerator.generate(nsfTextureA, nsfTextureB, maxDist, dstAlphaThreshold);
-
-  // 元の画像サイズにクロップ
-  const resultCanvas = document.createElement('canvas');
-  resultCanvas.width = srcImg.width;
-  resultCanvas.height = srcImg.height;
-  const resultCtx = resultCanvas.getContext('2d')!;
-  const x = (canvasWidth - srcImg.width) / 2;
-  const y = (canvasHeight - srcImg.height) / 2;
-  resultCtx.drawImage(sdfImg, x, y, srcImg.width, srcImg.height, 0, 0, srcImg.width, srcImg.height);
-
-  // 結果をHTMLImageElementとして返す
-  const resultImg = new Image();
-  resultImg.src = resultCanvas.toDataURL();
-
-  return resultImg;
+  const sdf = JFACompute.generateSignedDistanceField(
+      cookedData, inversedCookedData, maxDistance, dstAlphaThreshold
+  );
+  const sdfCanvas = sdf.toCanvas();
+  return sdfCanvas;
 }
 
-export { generateSDF };
+export async function generateDF(
+  src: HTMLImageElement | HTMLCanvasElement, 
+  srcAlphaThreshold: number,
+  inverseAlpha: boolean,
+  maxDistance: number): Promise<HTMLCanvasElement> {
+
+  const c = new Computron();
+  await c.init();
+
+  const jfa = new JFACompute(c);
+  await jfa.init();
+  
+  const plainImage = FloatField.createFromImageOrCanvas(src);
+
+  const seedMap = JFACompute.createJFASeedMap(plainImage, srcAlphaThreshold, inverseAlpha);
+  const cookedData = await jfa!.compute(seedMap!);
+
+  const distanceField = JFACompute.generateDistanceField(cookedData, maxDistance);
+  const dataCanvas = distanceField.toCanvas();
+  return dataCanvas;
+}

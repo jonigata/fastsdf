@@ -158,7 +158,7 @@ export class JFACompute {
     outerField: FloatField,
     innerField: FloatField,
     maxDist: number,
-    alphaThreshold: number | null = null
+    alphaThreshold?: number
   ): FloatField {
     const dstField = new FloatField(outerField.width, outerField.height);
     const dstData = dstField.data;
