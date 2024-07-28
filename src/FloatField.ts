@@ -23,13 +23,8 @@ export class FloatField {
     const data = new Float32Array(width * height * 4);
     for (let i = 0; i < data.length; i += 4) {
       if (Math.random() < seedDensity) {
-        data[i] = (i / 4) % width;
-        data[i + 1] = Math.floor((i / 4) / width);
-        data[i + 2] = 1.0;  // シードポイントのマーカー
-      } else {
-        data[i] = data[i + 1] = -1.0;  // 非シードポイント
-      }
-      data[i + 3] = 1.0;
+        data[i] = data[i + 1] = data[i + 2] = data[i + 3] = 1.0;
+      } 
     }
     return new FloatField(width, height, data);
   }
@@ -84,7 +79,7 @@ export class FloatField {
     // FloatFieldのデータをImageDataに変換
     for (let i = 0; i < data.length; i += 4) {
       // FloatFieldの値を0-255の範囲にマッピング
-      imageData.data[i] = Math.max(0, Math.min(255, Math.floor(data[i] * 255)));
+      imageData.data[i + 0] = Math.max(0, Math.min(255, Math.floor(data[i + 0] * 255)));
       imageData.data[i + 1] = Math.max(0, Math.min(255, Math.floor(data[i + 1] * 255)));
       imageData.data[i + 2] = Math.max(0, Math.min(255, Math.floor(data[i + 2] * 255)));
       imageData.data[i + 3] = Math.max(0, Math.min(255, Math.floor(data[i + 3] * 255)));
@@ -132,4 +127,59 @@ export class FloatField {
       averageAlpha
     };
   }  
+
+  convertToJFAFormat(alphaThreshold: number, inverseAlpha: boolean) {
+    const data = this.data;
+    const [w, h] = [this.width, this.height];
+
+    for (let y = 0; y < h ; y++) {
+      for (let x = 0; x < w ; x++) {
+        const i = (y * w + x) * 4;
+        let alpha = data[i + 3];
+        if (inverseAlpha) {
+          alpha = 1.0 - alpha;
+        }
+        
+        if (alpha >= alphaThreshold) {
+          // アルファ値が閾値以上ならシードとして設定
+          data[i + 0] = x;
+          data[i + 1] = y;
+          data[i + 2] = 1.0; // 母点マーク
+          data[i + 3] = 0.0;
+        } else {
+          // それ以外は非シード点として設定
+          data[i + 0] = -1.0;
+          data[i + 1] = -1.0;
+          data[i + 2] = 0.0;
+          data[i + 3] = 1e38;
+        }
+      }
+    }    
+  }
+
+  convertFromJFAFormat(maxDist: number, alphaThreshold: number | null = null) {
+    const data = this.data;
+    const [w, h] = [this.width, this.height];
+
+    for (let y = 0; y < h; y++) {
+      for (let x = 0; x < w; x++) {
+        const i = (y * w + x) * 4;
+        // alphaThresholdがある場合適用
+        let alpha = data[i + 3];
+        if (alphaThreshold != null) {
+          alpha = alpha < alphaThreshold ? 0 : 1;
+        }
+
+        const [nx, ny] = [data[i + 0], data[i + 1]];
+        const dist = Math.sqrt(data[i + 3]);
+        const normalizedDist = dist / maxDist;
+        alpha = 0.5 - (normalizedDist * 0.5); // 0.0 to 0.5
+        alpha = Math.max(0, Math.min(1, alpha));
+        data[i+0] = 1.0;
+        data[i+1] = 1.0;
+        data[i+2] = 1.0;
+        data[i+3] = alpha;
+      }
+    }
+  }
 }

@@ -13,10 +13,10 @@ const shaderCode = `
 fn main(@builtin(global_invocation_id) global_id: vec3u) {
     let index = global_id.y * uniforms.width + global_id.x;
     let current = input_data[index];
-    let step = 1u << (uniforms.maxSteps - uniforms.currentStep);
+    let step = 1u << (uniforms.maxSteps - 1 - uniforms.currentStep);
     
-    var best_distance = 3.402823466e+38;  // max float
-    var best_seed = vec2f(-1.0, -1.0);
+    var best_distance = current.w;
+    var best_seed = current.xy;
 
     for (var dy: i32 = -1; dy <= 1; dy++) {
         for (var dx: i32 = -1; dx <= 1; dx++) {
@@ -26,21 +26,18 @@ fn main(@builtin(global_invocation_id) global_id: vec3u) {
             let neighbor_index = select(index, u32(ny) * uniforms.width + u32(nx), is_in_bounds);
             let neighbor = input_data[neighbor_index];
             
+            let is_processed = neighbor.x >= 0.0;  // 1回以上処理済みかどうか
             let dx_f = f32(global_id.x) - neighbor.x;
             let dy_f = f32(global_id.y) - neighbor.y;
             let distance = dx_f * dx_f + dy_f * dy_f;
             
-            let is_seed = neighbor.w == 1.0;
-            let is_better = distance < best_distance && is_seed && is_in_bounds;
+            let is_better = distance < best_distance && is_processed && is_in_bounds;
             best_distance = select(best_distance, distance, is_better);
             best_seed = select(best_seed, neighbor.xy, is_better);
         }
     }
 
-    let is_current_seed = current.w == 1.0;
-    let has_new_seed = best_seed.x >= 0.0;
-    let new_color = select(current, vec4f(best_seed, 0.0, 1.0), has_new_seed);
-    output_data[index] = select(new_color, current, is_current_seed);
+    output_data[index] = vec4f(best_seed, current.z, best_distance);
 }
 `;
 
@@ -62,24 +59,12 @@ export class JFACompute {
     this.computeKit = this.computron.createComputeKit(config);
   }
 
-  private generateRandomInput(width: number, height: number): FloatField {
-    const data = new Float32Array(width * height * 4);
-    for (let i = 0; i < data.length; i += 4) {
-      data[i] = Math.random();     // R
-      data[i + 1] = Math.random(); // G
-      data[i + 2] = Math.random(); // B
-      data[i + 3] = Math.random(); // A
-    }
-    return new FloatField(width, height, data);
-  }
-
   async compute(inputField: FloatField): Promise<FloatField> {
     if (!this.computeKit) {
       throw new Error("Compute kit not initialized.");
     }
 
     const maxSteps = Math.log2(Math.max(inputField.width, inputField.height)) | 0;
-    console.log(`Max steps: ${maxSteps}`);
 
     let currentData = inputField.data;
     for (let step = 0; step < maxSteps; step++) {
@@ -97,9 +82,6 @@ export class JFACompute {
         inputField.width,
         inputField.height
       );
-
-      console.log(`Step ${step} completed`);
-      // ここで中間結果の分析や可視化を行うことができます
     }
 
     return new FloatField(inputField.width, inputField.height, currentData);

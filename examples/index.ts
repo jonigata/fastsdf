@@ -1,4 +1,4 @@
-import { JFACompute, Computron, FloatField, testRedShader } from '../dist/fastsdf.es.js';
+import { JFACompute, Computron, FloatField } from '../dist/fastsdf.es.js';
 
 // 計測
 async function measureTime<T>(label: string, f: () => Promise<T>): Promise<void> {
@@ -25,16 +25,23 @@ document.getElementById('my-button')!.addEventListener('click', async () => {
     let floatField: FloatField;
     await measureTime('Convert from source image', async () => {
         const sourcePicture = document.querySelector<HTMLImageElement>('#source-picture')!;
-        // floatField = FloatField.createFromImage(sourcePicture);
-        floatField = FloatField.createWithRandomSeeds(256, 256);
-        console.log(floatField.analyzeAlpha());
+        floatField = FloatField.createFromImage(sourcePicture);
+        //floatField = FloatField.createWithRandomSeeds(256, 256);
+    });
+    document.getElementById('result')!.appendChild(floatField!.toCanvas());
+
+    await measureTime('convert to JFA', async () => {
+        floatField.convertToJFAFormat(0.5, false);
     });
 
     let cookedData: FloatField;
     await measureTime('Compute', async () => {
         cookedData = await jfa!.compute(floatField!);
         // cookedData = await jfa!.compute(floatField.width, floatField.height);
-        console.log(cookedData.analyzeAlpha());
+    });
+
+    await measureTime('convert from JFA', async () => {
+        cookedData.convertFromJFAFormat(10);
     });
 
     let dataCanvas: HTMLCanvasElement;

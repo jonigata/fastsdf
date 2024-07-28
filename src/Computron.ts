@@ -90,7 +90,7 @@ export class Computron {
       this.device = null;
       
       this.initializeDevice().then(() => {
-        console.log("WebGPU device successfully restored.");
+        // console.log("WebGPU device successfully restored.");
       }).catch(error => {
         console.error("Failed to restore WebGPU device:", error);
       });
@@ -136,7 +136,6 @@ ${uniformsStructCode}
 
 ${config.shaderCode}
 `;
-    console.log(fullShaderCode);
 
     const bindGroupLayoutEntries: GPUBindGroupLayoutEntry[] = [
       { binding: 0, visibility: GPUShaderStage.COMPUTE, buffer: { type: "read-only-storage" } },
@@ -177,19 +176,19 @@ ${config.shaderCode}
     }
   
     const dataSize = width * height * 4;
-    console.log("Debug: dataSize =", dataSize);
+    // console.log("Debug: dataSize =", dataSize);
   
     const inputBuffer = this.createStorageBuffer(inputData);
-    console.log("Debug: inputBuffer created");
+    // console.log("Debug: inputBuffer created");
   
     const outputBuffer = this.device.createBuffer({
       size: dataSize * Float32Array.BYTES_PER_ELEMENT,
       usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_SRC
     });
-    console.log("Debug: outputBuffer created");
+    // console.log("Debug: outputBuffer created");
   
     // Uniformsの確認と設定
-    console.log("Debug: Uniforms", uniforms);
+    // console.log("Debug: Uniforms", uniforms);
     const uniformBufferSize = Object.keys(uniforms).length * 4; // 4 bytes per u32
     const uniformBuffer = this.device.createBuffer({
       size: uniformBufferSize,
@@ -197,7 +196,7 @@ ${config.shaderCode}
     });
     const uniformsArray = new Uint32Array(Object.values(uniforms));
     this.device.queue.writeBuffer(uniformBuffer, 0, uniformsArray);
-    console.log("Debug: uniformBuffer created and data written");
+    // console.log("Debug: uniformBuffer created and data written");
   
     const bindGroup = this.device.createBindGroup({
       layout: computeKit.bindGroupLayout,
@@ -207,10 +206,10 @@ ${config.shaderCode}
         { binding: 2, resource: { buffer: uniformBuffer } },
       ],
     });
-    console.log("Debug: bindGroup created");
+    // console.log("Debug: bindGroup created");
   
     const workgroupCount = computeKit.calculateWorkgroups(width, height);
-    console.log("Debug: workgroupCount =", workgroupCount);
+    // console.log("Debug: workgroupCount =", workgroupCount);
   
     const commandEncoder = this.createCommandEncoder();
     const passEncoder = commandEncoder.beginComputePass();
@@ -218,7 +217,7 @@ ${config.shaderCode}
     passEncoder.setBindGroup(0, bindGroup);
     passEncoder.dispatchWorkgroups(...workgroupCount);
     passEncoder.end();
-    console.log("Debug: Compute pass encoded");
+    // console.log("Debug: Compute pass encoded");
   
     const stagingBuffer = this.device.createBuffer({
       size: dataSize * Float32Array.BYTES_PER_ELEMENT,
@@ -232,19 +231,19 @@ ${config.shaderCode}
       0,
       dataSize * Float32Array.BYTES_PER_ELEMENT
     );
-    console.log("Debug: Buffer copy encoded");
+    // console.log("Debug: Buffer copy encoded");
   
     this.device.queue.submit([commandEncoder.finish()]);
-    console.log("Debug: Command submitted to GPU queue");
+    // console.log("Debug: Command submitted to GPU queue");
   
     await stagingBuffer.mapAsync(GPUMapMode.READ);
-    console.log("Debug: Staging buffer mapped");
+    // console.log("Debug: Staging buffer mapped");
   
     const resultArray = new Float32Array(stagingBuffer.getMappedRange());
-    console.log("Debug: Output data (first 10 values):", resultArray.slice(0, 40));
+    // console.log("Debug: Output data (first 10 values):", resultArray.slice(0, 40));
   
     const resultCopy = resultArray.slice();
-    console.log("Debug: Result copied from staging buffer");
+    // console.log("Debug: Result copied from staging buffer");
   
     stagingBuffer.unmap();
   
@@ -252,7 +251,7 @@ ${config.shaderCode}
     outputBuffer.destroy();
     uniformBuffer.destroy();
     stagingBuffer.destroy();
-    console.log("Debug: Buffers destroyed");
+    // console.log("Debug: Buffers destroyed");
   
     return resultCopy;
   }
