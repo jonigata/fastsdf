@@ -31,7 +31,7 @@ document.getElementById('my-button')!.addEventListener('click', async () => {
     document.getElementById('result')!.appendChild(floatField!.toCanvas());
 
     await measureTime('convert to JFA', async () => {
-        floatField.convertToJFAFormat(0.5, false);
+        JFACompute.convertToJFA(floatField, 0.5, false);
     });
 
     let cookedData: FloatField;
@@ -41,7 +41,7 @@ document.getElementById('my-button')!.addEventListener('click', async () => {
     });
 
     await measureTime('convert from JFA', async () => {
-        cookedData.convertFromJFAFormat(10);
+        JFACompute.convertFromJFA(cookedData, 10);
     });
 
     let dataCanvas: HTMLCanvasElement;
