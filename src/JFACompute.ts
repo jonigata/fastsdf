@@ -92,57 +92,98 @@ export class JFACompute {
   }
 
 
-  static convertToJFA(field: FloatField, alphaThreshold: number, inverseAlpha: boolean) {
-    const data = field.data;
+  static createJFASeedMap(field: FloatField, alphaThreshold: number, inverseAlpha: boolean): FloatField {
+    const newField = new FloatField(field.width, field.height);
+    const inputData = field.data;
+    const outputData = newField.data;
     const [w, h] = [field.width, field.height];
 
-    for (let y = 0; y < h ; y++) {
-      for (let x = 0; x < w ; x++) {
+    for (let y = 0; y < h; y++) {
+      for (let x = 0; x < w; x++) {
         const i = (y * w + x) * 4;
-        let alpha = data[i + 3];
+        let alpha = inputData[i + 3];
         if (inverseAlpha) {
           alpha = 1.0 - alpha;
         }
         
         if (alpha >= alphaThreshold) {
           // アルファ値が閾値以上ならシードとして設定
-          data[i + 0] = x;
-          data[i + 1] = y;
-          data[i + 2] = 1.0; // 母点マーク
-          data[i + 3] = 0.0;
+          outputData[i + 0] = x;
+          outputData[i + 1] = y;
+          outputData[i + 2] = 1.0; // 母点マーク
+          outputData[i + 3] = 0.0;
         } else {
           // それ以外は非シード点として設定
-          data[i + 0] = -1.0;
-          data[i + 1] = -1.0;
-          data[i + 2] = 0.0;
-          data[i + 3] = 1e38;
+          outputData[i + 0] = -1.0;
+          outputData[i + 1] = -1.0;
+          outputData[i + 2] = 0.0;
+          outputData[i + 3] = 1e38;
         }
       }
-    }    
+    }
+    
+    return newField;
   }
 
-  static convertFromJFA(field: FloatField, maxDist: number, alphaThreshold: number | null = null) {
-    const data = field.data;
+  static generateDistanceField(field: FloatField, maxDist: number, alphaThreshold: number | null = null): FloatField {
+    const newField = new FloatField(field.width, field.height);
+    const inputData = field.data;
+    const outputData = newField.data;
     const [w, h] = [field.width, field.height];
 
     for (let y = 0; y < h; y++) {
       for (let x = 0; x < w; x++) {
         const i = (y * w + x) * 4;
         // alphaThresholdがある場合適用
-        let alpha = data[i + 3];
+        let alpha = inputData[i + 3];
         if (alphaThreshold != null) {
           alpha = alpha < alphaThreshold ? 0 : 1;
         }
-
-        const [nx, ny] = [data[i + 0], data[i + 1]];
-        const dist = Math.sqrt(data[i + 3]);
+        const [nx, ny] = [inputData[i + 0], inputData[i + 1]];
+        const dist = Math.sqrt(inputData[i + 3]);
         const normalizedDist = dist / maxDist;
         alpha = 0.5 - (normalizedDist * 0.5); // 0.0 to 0.5
         alpha = Math.max(0, Math.min(1, alpha));
-        data[i+0] = 1.0;
-        data[i+1] = 1.0;
-        data[i+2] = 1.0;
-        data[i+3] = alpha;
+        outputData[i + 0] = 1.0;
+        outputData[i + 1] = 1.0;
+        outputData[i + 2] = 1.0;
+        outputData[i + 3] = alpha;
+      }
+    }
+
+    return newField;
+  }
+
+  static generateSignedDistanceField(
+    dstfield: FloatField,
+    outerField: FloatField,
+    innerField: FloatField,
+    maxDist: number, alphaThreshold: number | null = null) {
+
+    const dstData = dstfield.data;
+    const outerData = outerField.data;
+    const innerData = innerField.data;
+    const [w, h] = [dstfield.width, dstfield.height];
+
+    for (let y = 0; y < h; y++) {
+      for (let x = 0; x < w; x++) {
+        const i = (y * w + x) * 4;
+        // alphaThresholdがある場合適用
+        let alpha;
+        const outerDistSq = outerData[i + 3];
+        if (outerDistSq === 0) {
+          const innerDistSq = innerData[i + 3];
+          alpha = Math.min(1.0, 0.5 + Math.sqrt(innerDistSq) / maxDist);
+        } else {
+          alpha = Math.max(0.0, 0.5 - Math.sqrt(outerDistSq) / maxDist);
+        }
+        if (alphaThreshold != null) {
+          alpha = alpha < alphaThreshold ? 0 : 1;
+        }
+        dstData[i+0] = 1.0;
+        dstData[i+1] = 1.0;
+        dstData[i+2] = 1.0;
+        dstData[i+3] = alpha;
       }
     }
   }

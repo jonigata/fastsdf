@@ -22,31 +22,33 @@ document.getElementById('my-button')!.addEventListener('click', async () => {
         await jfa.init();
     });
 
-    let floatField: FloatField;
+    let plainImage: FloatField;
     await measureTime('Convert from source image', async () => {
         const sourcePicture = document.querySelector<HTMLImageElement>('#source-picture')!;
-        floatField = FloatField.createFromImage(sourcePicture);
+        plainImage = FloatField.createFromImage(sourcePicture);
         //floatField = FloatField.createWithRandomSeeds(256, 256);
     });
-    document.getElementById('result')!.appendChild(floatField!.toCanvas());
+    document.getElementById('result')!.appendChild(plainImage!.toCanvas());
 
+    let seedMap: FloatField;
     await measureTime('convert to JFA', async () => {
-        JFACompute.convertToJFA(floatField, 0.5, false);
+        seedMap = JFACompute.createJFASeedMap(plainImage, 0.5, false);
     });
 
     let cookedData: FloatField;
     await measureTime('Compute', async () => {
-        cookedData = await jfa!.compute(floatField!);
+        cookedData = await jfa!.compute(seedMap!);
         // cookedData = await jfa!.compute(floatField.width, floatField.height);
     });
 
+    let distanceField: FloatField;
     await measureTime('convert from JFA', async () => {
-        JFACompute.convertFromJFA(cookedData, 10);
+        distanceField = JFACompute.generateDistanceField(cookedData, 10);
     });
 
     let dataCanvas: HTMLCanvasElement;
     await measureTime('toCanvas', async () => {
-        dataCanvas = cookedData.toCanvas();
+        dataCanvas = distanceField.toCanvas();
     });
 
     const canvas = document.querySelector<HTMLCanvasElement>('#canvas')!;
