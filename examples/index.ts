@@ -1,4 +1,4 @@
-import { JFACompute, Computron, FloatField } from '../dist/fastsdf.es.js';
+import { JFACompute, Computron, FloatField, generateDF, generateSDF } from '../dist/fastsdf.es.js';
 
 // 計測
 async function measureTime<T>(label: string, f: () => Promise<T>): Promise<void> {
@@ -22,9 +22,10 @@ document.getElementById('my-button')!.addEventListener('click', async () => {
         await jfa.init();
     });
 
+    const sourcePicture = document.querySelector<HTMLImageElement>('#source-picture')!;
+
     let plainImage: FloatField;
     await measureTime('Convert from source image', async () => {
-        const sourcePicture = document.querySelector<HTMLImageElement>('#source-picture')!;
         plainImage = FloatField.createFromImage(sourcePicture);
         //floatField = FloatField.createWithRandomSeeds(256, 256);
     });
@@ -43,7 +44,7 @@ document.getElementById('my-button')!.addEventListener('click', async () => {
 
     let distanceField: FloatField;
     await measureTime('Generate distance field', async () => {
-        distanceField = JFACompute.generateDistanceField(cookedData, 10);
+        distanceField = JFACompute.generateDistanceField(cookedData, 10, 0.5);
     });
 
     let dataCanvas: HTMLCanvasElement;
@@ -67,5 +68,15 @@ document.getElementById('my-button')!.addEventListener('click', async () => {
         document.getElementById('result')!.appendChild(sdfCanvas);
     });
 
-   // await testRedShader();
+    await measureTime('Generate distance field (high level API)', async () => {
+        const sdfCanvas = await generateDF(sourcePicture, 0.5, false, 10, 0.5);
+        document.getElementById('result')!.appendChild(sdfCanvas);
+    });
+
+    await measureTime('Generate signed distance field (high level API)', async () => {
+        const sdfCanvas = await generateSDF(sourcePicture, 0.5, 10, 0.5);
+        document.getElementById('result')!.appendChild(sdfCanvas);
+    });
+
+    // await testRedShader();
 });

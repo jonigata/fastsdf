@@ -1,6 +1,6 @@
 {
   "name": "fastsdf",
-  "version": "0.0.6",
+  "version": "0.0.7",
   "main": "dist/fastsdf.es.js",
   "types": "dist/index.d.ts",
   "files": [

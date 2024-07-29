@@ -67,8 +67,10 @@ export class FloatField {
   static createFromImageOrCanvas(imageOrCanvas: HTMLImageElement | HTMLCanvasElement): FloatField {
     if (imageOrCanvas instanceof HTMLImageElement) {
       return FloatField.createFromImage(imageOrCanvas);
-    } else {
+    } else if (imageOrCanvas instanceof HTMLCanvasElement) {
       return FloatField.createFromCanvas(imageOrCanvas);
+    } else {
+      throw new Error("Invalid argument: must be an HTMLImageElement or HTMLCanvas, got " + typeof imageOrCanvas);
     }
   }
   
