@@ -1,5 +1,5 @@
 import { Computron } from "./Computron";
-import { JFACompute } from "./JFACompute";
+import { JFACompute, Curve } from "./JFACompute";
 import { FloatField } from "./FloatField";
 
 export async function generateNearestNeighbourMap(
@@ -25,7 +25,7 @@ export async function generateDF(
   srcAlphaThreshold: number,
   inverseAlpha: boolean,
   maxDistance: number,
-  dstAlphaThreshold: number): Promise<HTMLCanvasElement> {
+  dstAlphaThreshold: number | Curve | null): Promise<HTMLCanvasElement> {
 
   const c = new Computron();
   await c.init();
@@ -49,7 +49,7 @@ export async function generateSDF(
   color: {r: number, g: number, b: number}, 
   srcAlphaThreshold: number,
   maxDistance: number,  
-  dstAlphaThreshold: number): Promise<HTMLCanvasElement> {
+  dstAlphaThreshold: number | Curve | null): Promise<HTMLCanvasElement> {
 
   const c = new Computron();
   await c.init();
@@ -71,4 +71,3 @@ export async function generateSDF(
   const sdfCanvas = sdf.toCanvas();
   return sdfCanvas;
 }
-

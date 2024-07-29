@@ -1,14 +1,14 @@
 import { Computron, ComputeKit, ComputeKitConfig } from './Computron';
 import { FloatField } from './FloatField';
 
+export type Curve = (t: number) => number;
+
 const jfaUniforms = {
   width: 'u32',
   height: 'u32',
   maxSteps: 'u32',
   currentStep: 'u32'
 } as const;
-
-type Curve = (t: number) => number;
 
 const shaderCode = `
 @compute @workgroup_size(16, 16, 1)
