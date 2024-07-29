@@ -136,14 +136,14 @@ export class JFACompute {
         const i = (y * w + x) * 4;
         // alphaThresholdがある場合適用
         let alpha = inputData[i + 3];
-        if (alphaThreshold != null) {
-          alpha = alpha < alphaThreshold ? 0 : 1;
-        }
-        const [nx, ny] = [inputData[i + 0], inputData[i + 1]];
         const dist = Math.sqrt(inputData[i + 3]);
         const normalizedDist = dist / maxDist;
         alpha = 1.0 - normalizedDist; // 0.0 to 1.0
-        alpha = Math.max(0, Math.min(1, alpha));
+        if (alphaThreshold != null) {
+          alpha = alpha < alphaThreshold ? 0 : 1;
+        } else {
+          alpha = Math.max(0, Math.min(1, alpha));
+        }
         outputData[i + 0] = 1.0;
         outputData[i + 1] = 1.0;
         outputData[i + 2] = 1.0;
