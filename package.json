@@ -1,11 +1,10 @@
 {
   "name": "fastsdf",
-  "version": "0.0.3",
+  "version": "0.0.4",
   "main": "dist/fastsdf.es.js",
   "types": "dist/index.d.ts",
   "files": [
-    "dist",
-    "examples"
+    "dist"
   ],
   "scripts": {
     "build": "vite build",
