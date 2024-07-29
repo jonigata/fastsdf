@@ -19,8 +19,34 @@ export async function generateNearestNeighbourMap(
   return cookedData;
 }
 
+export async function generateDF(
+  src: HTMLImageElement | HTMLCanvasElement, 
+  color: {r: number, g: number, b: number}, 
+  srcAlphaThreshold: number,
+  inverseAlpha: boolean,
+  maxDistance: number,
+  dstAlphaThreshold: number): Promise<HTMLCanvasElement> {
+
+  const c = new Computron();
+  await c.init();
+
+  const jfa = new JFACompute(c);
+  await jfa.init();
+  
+  const plainImage = FloatField.createFromImageOrCanvas(src);
+
+  const seedMap = JFACompute.createJFASeedMap(plainImage, srcAlphaThreshold, inverseAlpha);
+  const cookedData = await jfa!.compute(seedMap!);
+
+  const distanceField = JFACompute.generateDistanceField(
+    cookedData, color, maxDistance, dstAlphaThreshold);
+  const dataCanvas = distanceField.toCanvas();
+  return dataCanvas;
+}
+
 export async function generateSDF(
   src: HTMLImageElement | HTMLCanvasElement, 
+  color: {r: number, g: number, b: number}, 
   srcAlphaThreshold: number,
   maxDistance: number,  
   dstAlphaThreshold: number): Promise<HTMLCanvasElement> {
@@ -40,32 +66,9 @@ export async function generateSDF(
   const inversedCookedData = await jfa!.compute(inversedSeedMap);
 
   const sdf = JFACompute.generateSignedDistanceField(
-      cookedData, inversedCookedData, maxDistance, dstAlphaThreshold
+      cookedData, inversedCookedData, color, maxDistance, dstAlphaThreshold
   );
   const sdfCanvas = sdf.toCanvas();
   return sdfCanvas;
 }
 
-export async function generateDF(
-  src: HTMLImageElement | HTMLCanvasElement, 
-  srcAlphaThreshold: number,
-  inverseAlpha: boolean,
-  maxDistance: number,
-  dstAlphaThreshold: number): Promise<HTMLCanvasElement> {
-
-  const c = new Computron();
-  await c.init();
-
-  const jfa = new JFACompute(c);
-  await jfa.init();
-  
-  const plainImage = FloatField.createFromImageOrCanvas(src);
-
-  const seedMap = JFACompute.createJFASeedMap(plainImage, srcAlphaThreshold, inverseAlpha);
-  const cookedData = await jfa!.compute(seedMap!);
-
-  const distanceField = JFACompute.generateDistanceField(
-    cookedData, maxDistance, dstAlphaThreshold);
-  const dataCanvas = distanceField.toCanvas();
-  return dataCanvas;
-}

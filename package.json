@@ -1,13 +1,13 @@
 {
   "name": "fastsdf",
-  "version": "0.0.7",
+  "version": "0.0.9",
   "main": "dist/fastsdf.es.js",
   "types": "dist/index.d.ts",
   "files": [
     "dist"
   ],
   "scripts": {
-    "build": "vite build",
+    "build": "vite build && npm run build-types",
     "test": "echo \"No test specified\" && exit 0",
     "build-types": "tsc --emitDeclarationOnly",
     "dev": "vite"

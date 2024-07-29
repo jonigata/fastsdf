@@ -8,6 +8,8 @@ const jfaUniforms = {
   currentStep: 'u32'
 } as const;
 
+type Curve = (t: number) => number;
+
 const shaderCode = `
 @compute @workgroup_size(16, 16, 1)
 fn main(@builtin(global_invocation_id) global_id: vec3u) {
@@ -125,11 +127,29 @@ export class JFACompute {
     return newField;
   }
 
-  static generateDistanceField(field: FloatField, maxDist: number, alphaThreshold: number | null = null): FloatField {
+  static makeCurve(alphaThreshold: number | Curve | null): Curve {
+    if (typeof alphaThreshold === 'function') {
+      return alphaThreshold;
+    } else if (typeof alphaThreshold === 'number') {
+      const threshold = alphaThreshold;
+      return (t: number) => t >= threshold ? 1 : 0;
+    } else {
+      return (t: number) => Math.max(0, Math.min(1, t));
+    }
+  }
+
+  static generateDistanceField(
+    field: FloatField, 
+    color: {r: number, g: number, b: number}, 
+    maxDist: number, 
+    alphaThreshold: number | Curve | null = null
+  ): FloatField {
     const newField = new FloatField(field.width, field.height);
     const inputData = field.data;
     const outputData = newField.data;
     const [w, h] = [field.width, field.height];
+
+    const curve = JFACompute.makeCurve(alphaThreshold);
 
     for (let y = 0; y < h; y++) {
       for (let x = 0; x < w; x++) {
@@ -139,14 +159,10 @@ export class JFACompute {
         const dist = Math.sqrt(inputData[i + 3]);
         const normalizedDist = dist / maxDist;
         alpha = 1.0 - normalizedDist; // 0.0 to 1.0
-        if (alphaThreshold != null) {
-          alpha = alpha < alphaThreshold ? 0 : 1;
-        } else {
-          alpha = Math.max(0, Math.min(1, alpha));
-        }
-        outputData[i + 0] = 1.0;
-        outputData[i + 1] = 1.0;
-        outputData[i + 2] = 1.0;
+        alpha = curve(alpha);
+        outputData[i + 0] = color.r;
+        outputData[i + 1] = color.g;
+        outputData[i + 2] = color.b;
         outputData[i + 3] = alpha;
       }
     }
@@ -157,14 +173,17 @@ export class JFACompute {
   static generateSignedDistanceField(
     outerField: FloatField,
     innerField: FloatField,
+    color: {r: number, g: number, b: number}, 
     maxDist: number,
-    alphaThreshold?: number
+    alphaThreshold: number | Curve | null = null
   ): FloatField {
     const dstField = new FloatField(outerField.width, outerField.height);
     const dstData = dstField.data;
     const outerData = outerField.data;
     const innerData = innerField.data;
     const [w, h] = [outerField.width, outerField.height];
+
+    const curve = JFACompute.makeCurve(alphaThreshold);
   
     for (let y = 0; y < h; y++) {
       for (let x = 0; x < w; x++) {
@@ -177,12 +196,10 @@ export class JFACompute {
         } else {
           alpha = Math.max(0.0, 0.5 - Math.sqrt(outerDistSq) / maxDist);
         }
-        if (alphaThreshold != null) {
-          alpha = alpha < alphaThreshold ? 0 : 1;
-        }
-        dstData[i + 0] = 1.0;
-        dstData[i + 1] = 1.0;
-        dstData[i + 2] = 1.0;
+        alpha = curve(alpha);
+        dstData[i + 0] = color.r;
+        dstData[i + 1] = color.g;
+        dstData[i + 2] = color.b;
         dstData[i + 3] = alpha;
       }
     }

@@ -11,6 +11,8 @@ async function measureTime<T>(label: string, f: () => Promise<T>): Promise<void>
 
 
 document.getElementById('my-button')!.addEventListener('click', async () => {
+    const color = { r: 0.5, g: 0.8, b: 0.3 };
+
     const start = performance.now();
 
     let jfa: JFACompute;
@@ -44,7 +46,7 @@ document.getElementById('my-button')!.addEventListener('click', async () => {
 
     let distanceField: FloatField;
     await measureTime('Generate distance field', async () => {
-        distanceField = JFACompute.generateDistanceField(cookedData, 10, 0.5);
+        distanceField = JFACompute.generateDistanceField(cookedData, color, 10, 0.5);
     });
 
     let dataCanvas: HTMLCanvasElement;
@@ -62,19 +64,19 @@ document.getElementById('my-button')!.addEventListener('click', async () => {
         const reveresedSeedMap = JFACompute.createJFASeedMap(plainImage, 0.5, true);
         const reveresedCookedData = await jfa!.compute(reveresedSeedMap);
         const sdf = JFACompute.generateSignedDistanceField(
-            cookedData, reveresedCookedData, 10, 0.9
+            cookedData, reveresedCookedData, color, 10, 0.9
         );
         const sdfCanvas = sdf.toCanvas();
         document.getElementById('result')!.appendChild(sdfCanvas);
     });
 
     await measureTime('Generate distance field (high level API)', async () => {
-        const sdfCanvas = await generateDF(sourcePicture, 0.5, false, 10, 0.5);
+        const sdfCanvas = await generateDF(sourcePicture, color, 0.5, false, 20, 0.5);
         document.getElementById('result')!.appendChild(sdfCanvas);
     });
 
     await measureTime('Generate signed distance field (high level API)', async () => {
-        const sdfCanvas = await generateSDF(sourcePicture, 0.5, 10, 0.5);
+        const sdfCanvas = await generateSDF(sourcePicture, color, 0.5, 10, 0.5);
         document.getElementById('result')!.appendChild(sdfCanvas);
     });
 
