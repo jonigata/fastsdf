@@ -1,6 +1,6 @@
 import { JFACompute } from './JFACompute';
 import { Computron } from './Computron';
 import { FloatField } from './FloatField';
-import { generateDF, generateSDF } from './generateSDF';
+import { generateNearestNeighbourMap, generateDF, generateSDF } from './generateSDF';
 
-export { FloatField, JFACompute, Computron, generateDF, generateSDF };
+export { FloatField, JFACompute, Computron, generateNearestNeighbourMap, generateDF, generateSDF };

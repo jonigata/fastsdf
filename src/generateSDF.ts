@@ -2,6 +2,23 @@ import { Computron } from "./Computron";
 import { JFACompute } from "./JFACompute";
 import { FloatField } from "./FloatField";
 
+export async function generateNearestNeighbourMap(
+  src: HTMLImageElement | HTMLCanvasElement, 
+  srcAlphaThreshold: number): Promise<FloatField> {
+
+  const c = new Computron();
+  await c.init();
+
+  const jfa = new JFACompute(c);
+  await jfa.init();
+
+  const plainImage = FloatField.createFromImageOrCanvas(src);
+
+  const seedMap = JFACompute.createJFASeedMap(plainImage, srcAlphaThreshold, false);
+  const cookedData = await jfa!.compute(seedMap!);
+  return cookedData;
+}
+
 export async function generateSDF(
   src: HTMLImageElement | HTMLCanvasElement, 
   srcAlphaThreshold: number,

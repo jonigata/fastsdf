@@ -278,12 +278,6 @@ ${config.shaderCode}
     );
   }
 
-  private createUniformBuffer(data: Float32Array): GPUBuffer {
-    return this.trackResource(
-      this.createBuffer(data, GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST)
-    );
-  }
-
   private createBuffer(data: Float32Array, usage: GPUBufferUsageFlags): GPUBuffer {
     if (!this.device) {
       throw new Error("GPUDevice not initialized.");
@@ -296,17 +290,6 @@ ${config.shaderCode}
     new Float32Array(buffer.getMappedRange()).set(data);
     buffer.unmap();
     return buffer;
-  }
-
-  private createBindGroup(layout: GPUBindGroupLayout, buffers: GPUBuffer[]): GPUBindGroup {
-    if (!this.device) {
-      throw new Error("GPUDevice not initialized.");
-    }
-    const entries = buffers.map((buffer, index) => ({
-      binding: index,
-      resource: { buffer }
-    }));
-    return this.device.createBindGroup({ layout, entries });
   }
 
   private createCommandEncoder(): GPUCommandEncoder {
