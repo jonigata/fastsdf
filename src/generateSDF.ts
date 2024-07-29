@@ -50,7 +50,8 @@ export async function generateDF(
   src: HTMLImageElement | HTMLCanvasElement, 
   srcAlphaThreshold: number,
   inverseAlpha: boolean,
-  maxDistance: number): Promise<HTMLCanvasElement> {
+  maxDistance: number,
+  dstAlphaThreshold: number): Promise<HTMLCanvasElement> {
 
   const c = new Computron();
   await c.init();
@@ -63,7 +64,8 @@ export async function generateDF(
   const seedMap = JFACompute.createJFASeedMap(plainImage, srcAlphaThreshold, inverseAlpha);
   const cookedData = await jfa!.compute(seedMap!);
 
-  const distanceField = JFACompute.generateDistanceField(cookedData, maxDistance);
+  const distanceField = JFACompute.generateDistanceField(
+    cookedData, maxDistance, dstAlphaThreshold);
   const dataCanvas = distanceField.toCanvas();
   return dataCanvas;
 }
