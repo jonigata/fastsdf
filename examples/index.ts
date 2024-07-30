@@ -71,7 +71,7 @@ document.getElementById('my-button')!.addEventListener('click', async () => {
     });
 
     await measureTime('Generate distance field (high level API)', async () => {
-        const sdfCanvas = await generateDF(sourcePicture, color, 0.5, false, 20, 0.5);
+        const sdfCanvas = await generateDF(sourcePicture, color, 0.5, false, 20, null);
         document.getElementById('result')!.appendChild(sdfCanvas);
     });
 
